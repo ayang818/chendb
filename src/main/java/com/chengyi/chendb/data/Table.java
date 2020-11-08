@@ -30,8 +30,8 @@ public class Table<T> {
     public void insertRecord(T record) {
         // 先插入磁盘
         disk.add(record);
-        System.out.println("插入数据到磁盘成功");
-        
+        // System.out.println("插入数据到磁盘成功");
+
         // 记录在数组中的偏移量，实际上应该是(track, sector, offset)组成的三元组，放在文件系统中就是数据在对应文件的偏移量
         int offset = disk.size() - 1;
         // 维护索引
@@ -49,7 +49,6 @@ public class Table<T> {
             }
             // 插入keyValue和在磁盘中的offset
             // 反射获取到的value值
-            System.out.println("插入数据索引值：" + keyValue);
             index.insertOrUpdate(keyValue, offset);
         }
     }

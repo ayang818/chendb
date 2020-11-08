@@ -8,7 +8,7 @@ package com.chengyi.chendb.idx;
  */
 public class BTree implements Index {
     int level;
-    public static final int defaultLevel = 10;
+    public static final int defaultLevel = 6;
     BNode root;
     String keyName;
 
@@ -22,10 +22,14 @@ public class BTree implements Index {
         this.keyName = keyName;
         this.level = level;
         root = new BNode(this.level, this);
+        root.setIsRoot(true);
     }
 
     public void insertOrUpdate(Comparable key, Object pointer) {
+        System.out.println("============= - insert start");
+        System.out.println("插入数据索引值：" + key);
         root.insert(key, pointer);
+        System.out.println("============= - insert end");
     }
 
     @Override
