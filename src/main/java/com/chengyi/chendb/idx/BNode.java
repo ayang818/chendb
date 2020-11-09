@@ -35,6 +35,13 @@ public class BNode {
         this.isRoot = false;
     }
 
+    /**
+     * tips :
+     * 1. 若B树不存在这个key,则一定是在叶子结点中进行插入操作。
+     * 2. 假设插入的key没有重复
+     * @param key
+     * @param pointer
+     */
     public void insert(Comparable key, Object pointer) {
         Entry entry = new Entry(key, pointer);
         // 如果没有child node 并且 此node未满，则在这个node中插入这个entry
@@ -48,24 +55,23 @@ public class BNode {
             } else {
                 // TODO 位置不够，开始裂页；
                 // 首先先将新节点放入即将满的entries数组， 然后进行一组find排序。
-                // 此时entries中有 m + 1 个元素(例如有五个元素，最多容纳四个元素)，取 2 1 2 作为新的裂页方案。 5
+                // 此时entries中有 m + 1 个元素(m = 4，即最终逻辑上只能容纳四个元素)，取 2 1 2 作为新的裂页方案。
                 int pos = find(key);
                 System.out.println("pos : " + pos);
                 arraycopy(pos, pos + 1, entrySize - pos);
                 // 此时entries满
                 entries[pos] = entry;
-                // 作为长度
+                // 作为左半部分长度
                 int leftPartLength = threshold;
-                // 作为下标
+                // 作为中间entry的下标
                 int midPartUnderCase = leftPartLength;
-                // 作为下标
+                // 作为右半部分开始下标
                 int rightPartStart = midPartUnderCase + 1;
 
                 Entry[] leftPart = new Entry[this.maxEntrySize + 1];
                 Entry midPart = entries[midPartUnderCase];
                 Entry[] rightPart = new Entry[this.maxEntrySize + 1];
 
-                System.out.println(Arrays.toString(entries));
 
                 System.arraycopy(entries, 0, leftPart, 0, leftPartLength);
                 setNulls(entries, 0, leftPartLength);
@@ -81,26 +87,41 @@ public class BNode {
                 leftNode.setEntries(leftPart);
                 BNode rightNode = new BNode(maxEntrySize, tree);
                 rightNode.setEntries(rightPart);
-                BNode parentNode = this.parent;
 
-                // 若父节点不为空，就把 midpart 插入父节点， midpart 左右两侧索引指向 leftpart 和 rightpart 。 leftpart 和 rightpart parent指向parent
-                if (parentNode != null) {
-                    leftNode.setParent(parentNode);
-                    rightNode.setParent(parentNode);
 
-                    parentNode.insert(midPart.getKey(), midPart.getPointer());
+                // 若父节点不为空，就把 midpart 插入父节点， midpart 左右两侧索引指向 leftpart 和 rightpart 。 leftpart 和 rightpart parent 指向 parent
+                if (this.parent != null) {
+                    leftNode.setParent(this.parent);
+                    rightNode.setParent(this.parent);
+
+                    this.parent.insert(midPart.getKey(), midPart.getPointer());
                     // TODO update parent index
+
 
                 } else {
                     // 若父节点为空，那么说明此时节点就是根节点，并且此时根节点只有一个元素。 只需要为此节点插入根索引节点即可.
                     leftNode.setParent(this);
                     rightNode.setParent(this);
 
-
-                    left(this, 0);
+                    setLeftNode(this, 0);
+                    setRightNode(this, 0);
+                    // 重新计算entry数量
+                    this.entrySize = 1;
+                    recountEntrySize(leftNode);
+                    recountEntrySize(rightNode);
                 }
             }
         }
+    }
+
+    private void recountEntrySize(BNode bNode) {
+        Entry[] entries = bNode.entries;
+        int cnt = 0;
+        for (Entry entry : entries) {
+            if (entry == null) break;
+            cnt ++;
+        }
+        bNode.entrySize = cnt;
     }
 
     public Object get(Object key) {
@@ -114,6 +135,7 @@ public class BNode {
 
     /**
      * 返回某个key需要插入的下标
+     *
      * @param key
      * @return
      */
@@ -130,12 +152,20 @@ public class BNode {
         return -1;
     }
 
-    private BNode left(BNode node, int pos) {
+    private BNode getLeftNode(BNode node, int pos) {
         return node.getChildren()[pos];
     }
 
-    private BNode right(BNode node, int pos) {
+    private BNode getRightNode(BNode node, int pos) {
         return node.getChildren()[pos + 1];
+    }
+
+    private void setLeftNode(BNode node, int pos) {
+        node.getChildren()[pos] = node;
+    }
+
+    private void setRightNode(BNode node, int pos) {
+        node.getChildren()[pos + 1] = node;
     }
 
     private void arraycopy(int start, int newStart, int len) {
