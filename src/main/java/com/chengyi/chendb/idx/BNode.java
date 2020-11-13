@@ -1,6 +1,10 @@
 package com.chengyi.chendb.idx;
 
+import jdk.nashorn.internal.ir.BinaryNode;
+
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class BNode {
     // (immutable) node所属b树
@@ -44,34 +48,46 @@ public class BNode {
      */
     public void insertOrUpdate(Comparable key, Object pointer) {
         Entry entry = new Entry(key, pointer);
-        // 不是叶子节点
+        // TODO #bug 寻找错误# 不是叶子节点
         if (childrenSize != 0) {
-            int pos = findInsertIndex(key);
-            BNode nextNode;
-            if (pos == maxEntrySize) {
-                nextNode = getRightNode(this, pos);
-            } else {
-                // 只要找到key相同，就原地更新
-                if (entries[pos].key.compareTo(key) == 0) {
-                    entries[pos].pointer = pointer;
-                    return ;
-                }
-                nextNode = getLeftNode(this, pos);
+            int[] posRes = findInsertIndex(this, key);
+            // 只要找到key相同，就原地更新并退出
+            if (posRes[1] == 0) {
+                entries[posRes[0]].pointer = pointer;
+                return;
             }
+            BNode nextNode;
+            // if (posRes[0] == maxEntrySize) {
+            //     nextNode = getRightNode(this, posRes[0]);
+            // } else {
+            //     nextNode = getLeftNode(this, posRes[0]);
+            // }
+            nextNode = getLeftNode(this, posRes[0]);
             nextNode.insertOrUpdate(key, pointer);
         } else {
-           directInsert2BNode(this, entry);
+            // 找到了目标大小叶子节点，直接将entry插入此叶子节点
+            this.directInsert2BNode(entry);
         }
     }
 
-    private void directInsert2BNode(BNode targetNode, Entry entry) {
-        // 是叶子节点，若已经满了，则需要裂页
+    /**
+     * 直接插入目标BNode，不再进行向下寻找；若目标BNode未满，则直接插入。若目标BNode1已满，则插入后裂页。
+     * WARNING: 此处函数主语为targetNode，而targetNode和this有些时候是不同的，此方法中的this指的都是第一次找到时候的叶节点
+     *
+     * @param entry
+     */
+    private void directInsert2BNode(Entry entry) {
+        int[] posRes = findInsertIndex(this, entry.getKey());
+        // System.out.println(toString(targetNode.entries));
+        // System.out.println("entrySize" + targetNode.entrySize);
         if (entrySize == maxEntrySize) {
-            int pos = findInsertIndex(entry.getKey());
+            if (posRes[1] == 0) {
+                entries[posRes[0]] = entry;
+            }
             // exp1 : [1,2,4,5,|]  插入 3, pos = 2, so len = 4 - 2 = 2 : true
-            arraycopy(pos, pos + 1, entrySize - pos);
+            this.arraycopy(posRes[0], posRes[0] + 1, entrySize - posRes[0]);
             // 先置入对应entries
-            entries[pos] = entry;
+            entries[posRes[0]] = entry;
             // 此时entries为【1,2,3,4,5】
             // 建立新页
             Entry[] leftNodeData = new Entry[this.entries.length];
@@ -79,10 +95,13 @@ public class BNode {
             // 拷贝新页
             BNode leftNode = new BNode(maxEntrySize, tree);
             BNode rightNode = new BNode(maxEntrySize, tree);
-            int leftLen = entries.length / 2;
+            int leftLen = this.entries.length / 2;
             Entry midEntry = entries[leftLen];
             System.arraycopy(entries, 0, leftNodeData, 0, leftLen);
             System.arraycopy(entries, leftLen + 1, rightNodeData, 0, entries.length - leftLen - 1);
+            System.out.println("裂页左部分　：" + toString(leftNodeData));
+            System.out.println("裂页中间部分　：" + midEntry);
+            System.out.println("裂页右部分　：" + toString(rightNodeData));
             leftNode.setEntries(leftNodeData);
             rightNode.setEntries(rightNodeData);
             // 重新计算裂页后新的entrySize
@@ -97,42 +116,58 @@ public class BNode {
             if (isRoot) {
                 BNode newRoot = new BNode(maxEntrySize, tree);
                 tree.setRoot(newRoot);
+                newRoot.setIsRoot(true);
                 newRoot.getEntries()[0] = midEntry;
                 setLeftNode(newRoot, leftNode, 0);
                 setRightNode(newRoot, rightNode, 0);
+                leftNode.setParent(newRoot);
+                rightNode.setParent(newRoot);
+                newRoot.setParent(null);
+                recountEntrySize(newRoot);
+                recountChildrenSize(newRoot);
             } else {
                 // 是正常的叶节点，那么必定有parent节点，不需要判空
-                BNode[] children = this.parent.getChildren();
+                // TODO wait to fix multi split error
+                BNode[] brothers = this.parent.getChildren();
+                for (BNode bro : brothers) {
+                    if (bro != null)
+                        System.out.println(toString(bro.entries));
+                }
                 int idx = 0;
-                for (; idx < children.length; idx++) {
-                    if (children[idx].equals(this)) {
+                for (; idx < brothers.length; idx++) {
+                    // 找出targetNode在兄弟节点中的排位
+                    if (brothers[idx].equals(this)) {
                         break;
                     }
                 }
-                System.arraycopy(children, idx, children, idx + 1, childrenSize - idx);
-                children[idx] = leftNode;
-                children[idx+1] = rightNode;
-                childrenSize++;
+                System.out.println("idx" + idx);
+                System.out.println(this.parent.childrenSize);
+
+                System.out.println(brothers.length);
+                System.arraycopy(brothers, idx, brothers, idx + 1, this.parent.childrenSize - idx);
+                // 由于targetNode已经裂页为leftNode和rightNode，所以需要先将leftNode和rightNode放到children数组中的合适位置
+                brothers[idx] = leftNode;
+                brothers[idx + 1] = rightNode;
+                this.parent.childrenSize++;
 
                 // 至此，即使是进行parent节点插入midEntry前，parent的children已经安排好了
-                directInsert2BNode(this.parent, midEntry);
-                // 此时我具有的完备数据
+                this.parent.directInsert2BNode(midEntry);
+                // 此时具有的完备数据
                 // 1. parent层的完整children指针
                 // 2. 可能获得的是 加入parent分裂过后的两个part
                 // 我要做的事重新设置可能的两个part的children　array以及重新计算他们的childrenSize
                 if (this.parent.splittedPart != null) {
                     int childIdx = 0;
+                    System.out.println("here use brother");
+                    // 将parent分裂后的两个part重新构造children数组；设置parent指针
                     for (int i = 0; i < 2; i++) {
-                        BNode curNode = splittedPart[i];
+                        BNode curNode = this.parent.splittedPart[i];
+                        recountEntrySize(curNode);
                         BNode[] curNodeChildren = curNode.getChildren();
-                        for (int j = 0; j <= entrySize; j++) {
-                            curNodeChildren[j] = this.parent.children[childIdx];
+                        for (int j = 0; j <= curNode.entrySize; j++) {
+                            curNodeChildren[j] = brothers[childIdx];
+                            brothers[childIdx].parent = curNode;
                             childIdx++;
-                            if (this.parent.children[childIdx].equals(leftNode)) {
-                                leftNode.setParent(curNode);
-                            } else if (this.parent.children[childIdx].equals(rightNode)) {
-                                rightNode.setParent(curNode);
-                            }
                         }
                         //　重新对分裂后得到的node计算childrenSize
                         recountChildrenSize(curNode);
@@ -144,11 +179,19 @@ public class BNode {
                 }
             }
         } else {
+            System.out.println("direct insert");
             // 叶子节点未满，直接寻找位置插入
-            int pos = findInsertIndex(entry.getKey());
-            arraycopy(pos, pos + 1, entrySize - pos);
-            entries[pos] = entry;
-            entrySize += 1;
+            if (posRes[1] == 0) {
+                this.entries[posRes[0]] = entry;
+                return ;
+            }
+            // System.out.println(toString(targetNode.entries));
+            // System.out.println(posRes[0]);
+            this.arraycopy(posRes[0], posRes[0] + 1, this.entrySize - posRes[0]);
+            // TODO 类方法的调用必须要注意的调用方法的主语，以免出现不同对象调用目标方法导致结果不符合预期
+            // System.out.println(toString(targetNode.entries));
+            this.entries[posRes[0]] = entry;
+            this.entrySize += 1;
         }
     }
 
@@ -178,7 +221,7 @@ public class BNode {
     }
 
     public void remove(Object key) {
-
+        
     }
 
     /**
@@ -188,25 +231,20 @@ public class BNode {
      * @return
      */
     @SuppressWarnings("unchecked")
-    private int findInsertIndex(Comparable key) {
-        for (int i = 0; i <= maxEntrySize; i++) {
-            if (entries[i] == null) return i;
+    private int[] findInsertIndex(BNode targetNode, Comparable key) {
+        for (int i = 0; i <= targetNode.maxEntrySize; i++) {
+            if (targetNode.entries[i] == null) return new int[]{i, 1};
+            int res = key.compareTo(targetNode.entries[i].key);
+            if (res == 0) {
+                System.out.println("寻找到相同key，直接更新退出");
+                return new int[]{i, 0};
+            }
             // 如果大于等于就继续往后找位置
-            if (key.compareTo(entries[i].key) < 0) {
-                return i;
+            if (res < 0) {
+                return new int[]{i, 1};
             }
         }
-        return -1;
-    }
-
-    private int findEqualPos(Comparable key) {
-        // 包括多出来的裂页临时值
-        for (int i = 0; i <= maxEntrySize; i++) {
-            if (key.compareTo(entries[i].key) == 0) {
-                return i;
-            }
-        }
-        return -1;
+        return new int[]{-1, -1};
     }
 
     private BNode getLeftNode(BNode node, int pos) {
@@ -225,6 +263,11 @@ public class BNode {
         curNode.getChildren()[pos + 1] = childNode;
     }
 
+    /**
+     * @param start
+     * @param newStart
+     * @param len
+     */
     private void arraycopy(int start, int newStart, int len) {
         System.arraycopy(this.entries, start, this.entries, newStart, len);
     }
@@ -273,6 +316,17 @@ public class BNode {
 
     public void setEntries(Entry[] entries) {
         this.entries = entries;
+    }
+
+    @Override
+    public String toString() {
+        return "BNode{" +
+                " children=" + Arrays.toString(children) +
+                ", entries=" + Arrays.toString(entries) +
+                ", entrySize=" + entrySize +
+                ", childrenSize=" + childrenSize +
+                ", isRoot=" + isRoot +
+                "}\n";
     }
 
     static class Entry {

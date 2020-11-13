@@ -1,5 +1,9 @@
 package com.chengyi.chendb.idx;
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
+
 /**
  * 1. 每个节点至少需要容纳一半大小的entry，例如总容量为11.那么至少需要容纳 ceil(11 / 2) = 6
  * 2. Root 最少可容纳 1 个entry
@@ -25,10 +29,13 @@ public class BTree implements Index {
         root.setIsRoot(true);
     }
 
+    static int cnt = 1;
     public void insertOrUpdate(Comparable key, Object pointer) {
         System.out.println("============= - insert start");
-        System.out.println("插入数据索引值：" + key);
+        System.out.println(cnt + "插入数据索引值：" + key);
+        cnt++;
         root.insertOrUpdate(key, pointer);
+        bfsPrintf(root);
         System.out.println("============= - insert end");
     }
 
@@ -64,5 +71,28 @@ public class BTree implements Index {
 
     public void setKeyName(String keyName) {
         this.keyName = keyName;
+    }
+
+    static Queue<BNode> queue = new LinkedList<>();
+    static Queue<Integer> levelQueue = new LinkedList<>();
+    public void bfsPrintf(BNode root) {
+        queue.offer(root);
+        levelQueue.offer(1);
+        while (!queue.isEmpty()) {
+            BNode curNode = queue.poll();
+            Integer level = levelQueue.poll();
+            System.out.printf("level %d : %s%n", level, Arrays.toString(curNode.getEntries()));
+            BNode[] children = curNode.getChildren();
+            if (children != null) {
+                for (BNode child : children) {
+                    if (child != null) {
+                        queue.offer(child);
+                        levelQueue.offer(level + 1);
+                    }
+                }
+            }
+        }
+        queue.clear();
+        levelQueue.clear();
     }
 }
