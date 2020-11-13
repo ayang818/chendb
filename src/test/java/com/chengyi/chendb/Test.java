@@ -13,8 +13,14 @@ public class Test {
         studentTable = new Table<>("student", 100);
         studentTable.createIndexOnField("id");
 
+        int cnt = 5000;
+
+        long startTime = System.currentTimeMillis();
         testSingleInsert();
-        testMultiInsert();
+        testMultiInsert(cnt);
+        long endTime = System.currentTimeMillis();
+        System.out.println("all data insert finished");
+        System.out.println(String.format("插入 %d 条数据花费 %f s", cnt, (endTime - startTime) / 1000.0));
     }
 
     public static void testSingleInsert() {
@@ -22,11 +28,11 @@ public class Test {
         studentTable.insertRecord(chengyi);
     }
 
-    public static void testMultiInsert() {
+    public static void testMultiInsert(int cnt) {
         List<Student> students = new ArrayList<>();
         Random random = new Random();
-        for (int i = 0; i < 100; i++) {
-            int id = random.nextInt(100);
+        for (int i = 0; i < cnt; i++) {
+            int id = random.nextInt(cnt);
             Student stu = new Student(id, geneRandomStr(10), geneRandomStr(10));
             students.add(stu);
         }

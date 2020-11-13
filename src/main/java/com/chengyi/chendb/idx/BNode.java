@@ -99,9 +99,11 @@ public class BNode {
             Entry midEntry = entries[leftLen];
             System.arraycopy(entries, 0, leftNodeData, 0, leftLen);
             System.arraycopy(entries, leftLen + 1, rightNodeData, 0, entries.length - leftLen - 1);
-            System.out.println("裂页左部分　：" + toString(leftNodeData));
-            System.out.println("裂页中间部分　：" + midEntry);
-            System.out.println("裂页右部分　：" + toString(rightNodeData));
+
+            // System.out.println("裂页左部分　：" + toString(leftNodeData));
+            // System.out.println("裂页中间部分　：" + midEntry);
+            // System.out.println("裂页右部分　：" + toString(rightNodeData));
+
             leftNode.setEntries(leftNodeData);
             rightNode.setEntries(rightNodeData);
             // 重新计算裂页后新的entrySize
