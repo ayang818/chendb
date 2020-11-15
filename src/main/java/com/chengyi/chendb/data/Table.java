@@ -71,4 +71,19 @@ public class Table<T> {
         // 将索引加入表
         indexes.add(bTree);
     }
+
+    public T selectByIdIfEqual(Comparable id, String fieldName) {
+        T res = null;
+        for (Index index : indexes) {
+            String keyName = index.getKeyName();
+            if (keyName.equals(fieldName)) {
+                Integer offset = (Integer) index.selectById(id);
+                if (offset != null) {
+                    res = disk.get(offset);
+                }
+                break;
+            }
+        }
+        return res;
+    }
 }

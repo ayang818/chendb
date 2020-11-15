@@ -1,30 +1,26 @@
 package com.chengyi.chendb.idx;
 
-import jdk.nashorn.internal.ir.BinaryNode;
-
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.Queue;
 
 public class BNode {
     // (immutable) node所属b树
-    BTree tree;
+    private BTree tree;
     // (mutable) 方便裂页溢出时，mid part entry填充到父页
-    BNode parent;
+    private BNode parent;
     // (mutable) 存储指向子node的指针
-    BNode[] children;
+    private BNode[] children;
     // (mutable) 存储node中entry数据
-    Entry[] entries;
+    private Entry[] entries;
     // (immutable) node中最多可以存的entry数量
-    int maxEntrySize;
+    private int maxEntrySize;
     // (mutable) node中当前entry的数量, max(entrySize) = maxEntrySize，实际数组长度是可以到maxEntrySize + 1.
-    int entrySize;
+    private int entrySize;
     // (mutable) 指向子node的指针数量
-    int childrenSize;
+    private int childrenSize;
     // (mutable) 是否为根节点
-    boolean isRoot;
+    private boolean isRoot;
     // (mutable) 分裂后的页
-    BNode[] splittedPart;
+    private BNode[] splittedPart;
 
     public BNode(int maxEntrySize, BTree tree) {
         this.tree = tree;
@@ -217,9 +213,23 @@ public class BNode {
         bNode.childrenSize = cnt;
     }
 
-    public Object get(Object key) {
-
-        return null;
+    public Object get(Comparable key) {
+        int[] posRes = findInsertIndex(this, key);
+        // 只要找到key相同，返回对应offset
+        if (posRes[1] == 0) {
+            return entries[posRes[0]].pointer;
+        }
+        if (this.childrenSize == 0) {
+            return null;
+        }
+        BNode nextNode;
+        // if (posRes[0] == maxEntrySize) {
+        //     nextNode = getRightNode(this, posRes[0]);
+        // } else {
+        //     nextNode = getLeftNode(this, posRes[0]);
+        // }
+        nextNode = getLeftNode(this, posRes[0]);
+        return nextNode.get(key);
     }
 
     public void remove(Object key) {
@@ -238,7 +248,7 @@ public class BNode {
             if (targetNode.entries[i] == null) return new int[]{i, 1};
             int res = key.compareTo(targetNode.entries[i].key);
             if (res == 0) {
-                System.out.println("寻找到相同key，直接更新退出");
+                // System.out.println("寻找到相同key，直接更新退出");
                 return new int[]{i, 0};
             }
             // 如果大于等于就继续往后找位置

@@ -14,13 +14,16 @@ public class Test {
         studentTable.createIndexOnField("id");
 
         int cnt = 5000;
+        int bound = 3000;
 
         long startTime = System.currentTimeMillis();
         testSingleInsert();
-        testMultiInsert(cnt);
+        testMultiInsert(cnt, bound);
         long endTime = System.currentTimeMillis();
         System.out.println("all data insert finished");
         System.out.println(String.format("插入 %d 条数据花费 %f s", cnt, (endTime - startTime) / 1000.0));
+
+        testSelect(cnt, bound);
     }
 
     public static void testSingleInsert() {
@@ -28,11 +31,11 @@ public class Test {
         studentTable.insertRecord(chengyi);
     }
 
-    public static void testMultiInsert(int cnt) {
+    public static void testMultiInsert(int cnt, int bound) {
         List<Student> students = new ArrayList<>();
         Random random = new Random();
         for (int i = 0; i < cnt; i++) {
-            int id = random.nextInt(cnt);
+            int id = random.nextInt(bound);
             Student stu = new Student(id, geneRandomStr(10), geneRandomStr(10));
             students.add(stu);
         }
@@ -40,6 +43,19 @@ public class Test {
         // TODO 暂时采用单次调用形式
         for (Student student : students) {
             studentTable.insertRecord(student);
+        }
+    }
+
+    public static void testSelect(int cnt, int bound) {
+        Random random = new Random();
+        for (int i = 0; i < cnt; i++) {
+            int id = random.nextInt(bound);
+            Student stu = studentTable.selectByIdIfEqual(id, "id");
+            if (stu != null) {
+                System.out.printf("id 为 %d 的学生记录为 %s%n", id, stu.toString());
+            } else {
+                System.out.printf("不存在 id 为 %d 的学生%n", id);
+            }
         }
     }
 

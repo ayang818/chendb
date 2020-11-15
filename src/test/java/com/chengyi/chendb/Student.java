@@ -38,4 +38,13 @@ public class Student {
     public void setSchoolId(String schoolId) {
         this.schoolId = schoolId;
     }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", schoolId='" + schoolId + '\'' +
+                '}';
+    }
 }

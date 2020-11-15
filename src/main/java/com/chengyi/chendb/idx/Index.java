@@ -9,14 +9,9 @@ public interface Index {
      */
     void insertOrUpdate(Comparable key, Object pointer);
 
-    /**
-     * 
-     * @param key
-     * @return
-     */
-    Object get(Object key);
+    Object selectById(Comparable id);
 
-    void remove(Object key);
+    void remove(Comparable key);
 
     /**
      * 获取索引对应字段名称

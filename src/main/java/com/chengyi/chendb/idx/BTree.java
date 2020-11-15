@@ -39,13 +39,18 @@ public class BTree implements Index {
         System.out.println("============= - insert end");
     }
 
+    /**
+     * @param id
+     * @return 一个标志table中disk数组偏移量的对象；在磁盘中表示文件位置的偏移量
+     */
     @Override
-    public Object get(Object key) {
-        return root.get(key);
+    public Object selectById(Comparable id) {
+        Object offset = this.root.get(id);
+        return offset;
     }
 
     @Override
-    public void remove(Object key) {
+    public void remove(Comparable key) {
         root.remove(key);
     }
 
