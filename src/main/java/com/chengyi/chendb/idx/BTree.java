@@ -35,7 +35,7 @@ public class BTree implements Index {
         System.out.println(cnt + "插入数据索引值：" + key);
         cnt++;
         root.insertOrUpdate(key, pointer);
-        // bfsPrintf(root);
+        bfsPrintf(root);
         System.out.println("============= - insert end");
     }
 

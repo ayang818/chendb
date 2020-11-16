@@ -13,8 +13,8 @@ public class Test {
         studentTable = new Table<>("student", 100);
         studentTable.createIndexOnField("id");
 
-        int cnt = 5000;
-        int bound = 3000;
+        int cnt = 100;
+        int bound = 200;
 
         long startTime = System.currentTimeMillis();
         testSingleInsert();
