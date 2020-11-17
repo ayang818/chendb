@@ -248,19 +248,23 @@ public class BNode {
      */
     @SuppressWarnings("unchecked")
     private int[] findInsertIndex(BNode targetNode, Comparable key) {
-        for (int i = 0; i <= targetNode.maxEntrySize; i++) {
-            if (targetNode.entries[i] == null) return new int[]{i, 1};
-            int res = key.compareTo(targetNode.entries[i].key);
-            if (res == 0) {
-                // System.out.println("寻找到相同key，直接更新退出");
-                return new int[]{i, 0};
-            }
-            // 如果大于等于就继续往后找位置
-            if (res < 0) {
-                return new int[]{i, 1};
+        int left = 0;
+        int right = targetNode.entrySize;
+        int mid;
+        while (left < right) {
+            mid = (left + right) / 2;
+            Entry entry = targetNode.entries[mid];
+            if (entry == null) return new int[]{mid, 1};
+            int cmp = entry.key.compareTo(key);
+            if (cmp > 0) {
+                right = mid - 1;
+            } else if (cmp < 0) {
+                left = mid + 1;
+            } else {
+                return new int[]{mid, 0};
             }
         }
-        return new int[]{-1, -1};
+        return new int[]{0, 1};
     }
 
     private BNode getLeftNode(BNode node, int pos) {
