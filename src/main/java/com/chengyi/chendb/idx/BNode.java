@@ -1,6 +1,8 @@
 package com.chengyi.chendb.idx;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class BNode {
     // (immutable) node所属b树
@@ -238,6 +240,8 @@ public class BNode {
 
     /**
      * 返回第一个比 key 大的值的下标； 若所有元素都比 key 小则返回当前元素数量（最大非空元素下标 +　１）；
+     *
+     * TODO 切换成使用二分查找
      *
      * @param key
      * @return
